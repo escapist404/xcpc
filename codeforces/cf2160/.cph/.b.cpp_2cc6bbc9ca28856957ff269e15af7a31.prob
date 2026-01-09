@@ -1,0 +1,1 @@
+{"name":"Local: b","url":"/home/escapist404/codeforces/cf2160/b.cpp","tests":[{"id":1760280115147,"input":"4\n3\n1 3 6\n3\n1 3 5\n3\n1 3 4\n4\n1 2 3 7\n","output":"1 3 2\n2 3 2\n3 2 2\n4 4 4 1\n"}],"interactive":false,"memoryLimit":1024,"timeLimit":3000,"srcPath":"/home/escapist404/codeforces/cf2160/b.cpp","group":"local","local":true}
