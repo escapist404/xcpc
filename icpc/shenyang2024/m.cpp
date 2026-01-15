@@ -1,76 +1,123 @@
 #include <bits/stdc++.h>
 
-std::vector<int> get_scc_idx(const std::vector<std::vector<int>> &adj) {
-	const int n = adj.size();
-	int cur_dfn = -1;
-	std::vector<int> dfn(n, -1), low(n, -1);
-	std::stack<int> stack;
-	std::vector<bool> in_stack(n, false);
-	int cur_scc = -1;
-	std::vector<int> scc_idx(n, -1);
-
-	const auto tarjan = [&](const int cur, const auto &self) -> void {
-		dfn[cur] = low[cur] = ++cur_dfn;
-		stack.push(cur);
-		in_stack[cur] = true;
-
-		for (const int to : adj[cur]) {
-			if (!~dfn[to]) {
-				self(to, self);
-				low[cur] = std::min(low[cur], low[to]);
-			} else if (in_stack[to])
-				low[cur] = std::min(low[cur], dfn[to]);
-		}
-
-		if (dfn[cur] != low[cur]) return;
-
-		++cur_scc;
-		for (int node = -1; node != cur;) {
-			node = stack.top();
-			stack.pop();
-			in_stack[node] = false;
-			scc_idx[node] = cur_scc;
-		}
-	};
-
-	for (int u = 0; u < n; ++u)
-		if (!~dfn[u]) tarjan(u, tarjan);
-
-	return scc_idx;
-}
-
-std::vector<std::vector<int>> get_dag(const std::vector<std::vector<int>> &adj,
-									  const std::vector<int> &scc_idx) {
-	const int n = adj.size();
-	std::vector<std::vector<int>> dag(
-		*std::max_element(scc_idx.begin(), scc_idx.end()) + 1);
-	for (int u = 0; u < n; ++u)
-		for (const int v : adj[u])
-			if (scc_idx[u] != scc_idx[v]) dag[scc_idx[u]].push_back(scc_idx[v]);
-	return dag;
-}
-
-std::vector<std::vector<int>> get_dag(
-	const std::vector<std::vector<int>> &adj) {
-	return get_dag(adj, get_scc_idx(adj));
-}
-
-void solve() {
-    int n, m, q;
-    std::cin >> n >> m >> q;
-
-
-}
+using i64 = long long;
 
 int main() {
     std::ios::sync_with_stdio(false);
     std::cin.tie(nullptr);
+    
+    int n, m, q;
+    std::cin >> n >> m >> q;
 
-    int T;
-    std::cin >> T;
+    std::vector<std::vector<std::pair<int, i64>>> adj(n);
+    for (int i = 0; i < m; ++i) {
+        int a, b;
+        std::cin >> a >> b;
 
-    while (T--) {
-        solve();
+        int u = (a % n + n) % n;
+        int v = ((a + b) % n + n) % n;
+        adj[u].emplace_back(v, b);
+    }
+
+    int col = 0;
+    std::vector<int> id(n), low(n), vis(n), stack, scc(n);
+    auto tarjan = [&, cur = 0](auto& self, const int u) mutable -> void {
+        id[u] = low[u] = cur++;
+        stack.push_back(u), vis[u] = 1;
+        for (const auto [v, _] : adj[u]) {
+            if (vis[v] == 0) {
+                self(self, v);
+                low[u] = std::min(low[u], low[v]);
+            } else if (vis[v] == 1) {
+                low[u] = std::min(low[u], id[v]);
+            }
+        }
+        
+        if (id[u] != low[u]) {
+            return;
+        }
+
+        int v = -1;
+        do {
+            v = stack.back();
+            stack.pop_back();
+            scc[v] = col;
+            vis[v] = 2;
+        } while (v != u);
+        col++;
+    };
+
+    for (int i = 0; i < n; ++i) {
+        if (vis[i] == 0) {
+            tarjan(tarjan, i);
+        }
+    }
+
+    std::vector<std::vector<int>> scc_adj(col);
+    std::vector<int> scc_deg(col), is(col);
+
+    vis = std::vector<int>(n, 0);
+    std::vector<i64> h(n);
+    for (int i = 0; i < n; ++i) {
+        if (vis[i] == 0) {
+            int now = scc[i];
+            bool ok = false;
+            std::queue<int> queue;
+            vis[i] = 1;
+            queue.push(i);
+
+            while (queue.empty() == false) {
+                auto u = queue.front();
+                queue.pop();
+                for (const auto [v, w] : adj[u]) {
+                    if (scc[v] != now) {
+                        scc_adj[scc[v]].push_back(now);
+                        scc_deg[now]++;
+                        continue;
+                    }
+                    if (vis[v] == 0) {
+                        h[v] = h[u] + w;
+                        vis[v] = 1;
+                        queue.push(v);
+                    } else if (h[v] - h[u] != w) {
+                        ok = true;
+                    }
+                }
+            }
+
+            is[now] = ok;
+        }
+    }
+
+    std::queue<int> queue;
+    for (int i = 0; i < col; ++i) {
+        if (scc_deg[i] == 0) {
+            queue.push(i);
+        }
+    }
+
+    while (queue.empty() == false) {
+        auto u = queue.front();
+        queue.pop();
+
+        for (auto v : scc_adj[u]) {
+            is[v] |= is[u];
+            scc_deg[v]--;
+            if (scc_deg[v] == 0) {
+                queue.push(v);
+            }
+        }
+    }
+
+    while (q--) {
+        int x;
+        std::cin >> x;
+        x = (x % n + n) % n;
+        if (is[scc[x]]) {
+            std::cout << "Yes\n";
+        } else {
+            std::cout << "No\n";
+        }
     }
 
     return 0;
